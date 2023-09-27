@@ -1,0 +1,31 @@
+# permissions for end users to edit configprobes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: configprobe-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: probeoperator
+    app.kubernetes.io/part-of: probeoperator
+    app.kubernetes.io/managed-by: kustomize
+  name: configprobe-editor-role
+rules:
+- apiGroups:
+  - synthetic.clodevo.com
+  resources:
+  - configprobes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - synthetic.clodevo.com
+  resources:
+  - configprobes/status
+  verbs:
+  - get

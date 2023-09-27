@@ -1,0 +1,27 @@
+# permissions for end users to view configprobes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: configprobe-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: probeoperator
+    app.kubernetes.io/part-of: probeoperator
+    app.kubernetes.io/managed-by: kustomize
+  name: configprobe-viewer-role
+rules:
+- apiGroups:
+  - synthetic.clodevo.com
+  resources:
+  - configprobes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - synthetic.clodevo.com
+  resources:
+  - configprobes/status
+  verbs:
+  - get
