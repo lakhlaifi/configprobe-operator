@@ -18,13 +18,16 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/go-logr/logr"
 	syntheticv1 "github.com/lakhlaifi/configprobe-operator/api/v1"
 )
 
@@ -32,7 +35,6 @@ import (
 type ConfigProbeReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Log    logr.Logger
 }
 
 //+kubebuilder:rbac:groups=synthetic.clodevo.com,resources=configprobes,verbs=get;list;watch;create;update;patch;delete
@@ -50,7 +52,8 @@ type ConfigProbeReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *ConfigProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// _ = log.FromContext(ctx)
-	log := r.Log.WithValues("configprobe", req.NamespacedName)
+	log := ctrl.Log.WithName("controllers").WithName("ConfigProbe")
+
 	// Fetch the ConfigProbe instance
 	instance := &syntheticv1.ConfigProbe{}
 	err := r.Get(ctx, req.NamespacedName, instance)
@@ -59,12 +62,36 @@ func (r *ConfigProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			log.Info("ConfigProbe resource not found. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
+		log.Error(err, "Failed to get ConfigProbe")
 		return ctrl.Result{}, err
 	}
 
 	// Handle the configuration from instance.Spec
 	// ...
-	log.Info("Reconciling ConfigProbe", "spec", instance.Spec)
+	log.Info("Successfully fetched ConfigProbe", "ConfigProbe", instance)
+
+	// Serialize the instance.Spec to a file
+	fileContent, err := json.Marshal(instance.Spec)
+	if err != nil {
+		log.Error(err, "Failed to serialize ConfigProbe spec")
+		return ctrl.Result{}, err
+	}
+
+	// Define the directory and file paths based on the emptyDir volume
+	dirPath := fmt.Sprintf("/data/%s", instance.Namespace)
+	filePath := fmt.Sprintf("%s/%s.json", dirPath, instance.Name)
+
+	// Ensure the directory exists
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		os.Mkdir(dirPath, 0755)
+	}
+
+	// Write the serialized spec to the file
+	err = ioutil.WriteFile(filePath, fileContent, 0644)
+	if err != nil {
+		log.Error(err, "Failed to write ConfigProbe spec to file")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }

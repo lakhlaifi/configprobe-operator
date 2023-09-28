@@ -89,10 +89,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ConfigProbeReconciler{
+	reconciler := &controllers.ConfigProbeReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}
+
+	if err = reconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConfigProbe")
 		os.Exit(1)
 	}
@@ -107,9 +109,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	go func() {
+		// setupLog.Info("starting HTTP Server Probe 8082 /probe/")
+		reconciler.StartHTTPServer()
+	}()
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+
 }
