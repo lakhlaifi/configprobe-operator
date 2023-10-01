@@ -1,4 +1,4 @@
-docker build -t configprobe-operator:latest .
+docker build -t lakhlaifi/configprobe-operator:latest .
 docker push configprobe-operator:latest
 
 

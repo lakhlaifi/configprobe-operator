@@ -37,18 +37,10 @@ spec:
             properties:
               http:
                 properties:
-                  follow_redirects:
-                    type: boolean
                   preferred_ip_protocol:
                     type: string
-                  valid_http_versions:
-                    items:
-                      type: string
-                    type: array
                 required:
-                - follow_redirects
                 - preferred_ip_protocol
-                - valid_http_versions
                 type: object
               prober:
                 type: string

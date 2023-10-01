@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func (r *ConfigProbeReconciler) StartHTTPServer() {
@@ -19,6 +20,21 @@ func (r *ConfigProbeReconciler) StartHTTPServer() {
 	http.ListenAndServe(port, nil)
 }
 
+func getBboxForRegion(region string) (string, error) {
+	data, err := ioutil.ReadFile("/config/blackbox/bbox_urls")
+	if err != nil {
+		return "BBOX DataSource: ", err
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		parts := strings.Split(line, ": ")
+		if len(parts) == 2 && parts[0] == region {
+			return parts[1], nil
+		}
+	}
+	return "", fmt.Errorf("Region not found")
+}
 func (r *ConfigProbeReconciler) handleHTTPRequest(w http.ResponseWriter, req *http.Request) {
 
 	log := ctrl.Log.WithName("controllers").WithName("ConfigProbe")
@@ -34,6 +50,7 @@ func (r *ConfigProbeReconciler) handleHTTPRequest(w http.ResponseWriter, req *ht
 	// Parse the query parameters
 	target := req.URL.Query().Get("target")
 	module := req.URL.Query().Get("module")
+	region := req.URL.Query().Get("region")
 
 	// Check if target and module are provided
 	if target == "" || module == "" {
@@ -41,8 +58,15 @@ func (r *ConfigProbeReconciler) handleHTTPRequest(w http.ResponseWriter, req *ht
 		return
 	}
 
-	// Send a GET request to another server
-	response, err := http.Get(fmt.Sprintf("http://blackbox-westeurope--4m2tpov.wonderfulforest-14e15c11.westeurope.azurecontainerapps.io/probe?target=%s&module=%s", target, module))
+	// /config/blackbox/bbox_urls
+	// Get the bbox for the region
+	bbox, err := getBboxForRegion(region)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get host for region: %v", err), http.StatusInternalServerError)
+		return
+	}
+	response, err := http.Get(fmt.Sprintf("%s/probe?target=%s&module=%s", bbox, target, module))
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to send request to other server: %v", err), http.StatusInternalServerError)
 		return
